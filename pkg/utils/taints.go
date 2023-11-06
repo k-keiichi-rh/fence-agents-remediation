@@ -47,19 +47,28 @@ func deleteTaint(taints []corev1.Taint, taintToDelete *corev1.Taint) ([]corev1.T
 func CreateFARNoExecuteTaint() corev1.Taint {
 	return corev1.Taint{
 		Key:    v1alpha1.FARNoExecuteTaintKey,
+		Value:  "fence-agents-remediation",
+		Effect: corev1.TaintEffectNoExecute,
+	}
+}
+
+// CreateOutOfServiceTaint returns an OutOfService taint
+func CreateOutOfServiceTaint() corev1.Taint {
+	return corev1.Taint{
+		Key:    corev1.TaintNodeOutOfService,
+		Value:  "nodeshutdown",
 		Effect: corev1.TaintEffectNoExecute,
 	}
 }
 
 // AppendTaint appends new taint to the taint list when it is not present, and returns error if it fails in the process
-func AppendTaint(r client.Client, nodeName string) error {
+func AppendTaint(r client.Client, nodeName string, taint corev1.Taint) error {
 	// find node by name
 	node, err := GetNodeWithName(r, nodeName)
 	if err != nil {
 		return err
 	}
 
-	taint := CreateFARNoExecuteTaint()
 	// check if taint doesn't exist
 	if TaintExists(node.Spec.Taints, &taint) {
 		return nil
@@ -79,14 +88,13 @@ func AppendTaint(r client.Client, nodeName string) error {
 }
 
 // RemoveTaint removes taint from the taint list when it is existed, and returns error if it fails in the process
-func RemoveTaint(r client.Client, nodeName string) error {
+func RemoveTaint(r client.Client, nodeName string, taint corev1.Taint) error {
 	// find node by name
 	node, err := GetNodeWithName(r, nodeName)
 	if err != nil {
 		return err
 	}
 
-	taint := CreateFARNoExecuteTaint()
 	// check if taint exist
 	if !TaintExists(node.Spec.Taints, &taint) {
 		return nil

@@ -224,16 +224,11 @@ var _ = Describe("FAR Controller", func() {
 		})
 
 		When("creating valid FAR CR", func() {
-			var va *storagev1.VolumeAttachment
-			var terminatingPod *corev1.Pod
 			BeforeEach(func() {
 				node = utils.GetNode("", workerNode)
 				underTestFAR = getFenceAgentsRemediation(workerNode, fenceAgentIPMI, testShareParam, testNodeParam, v1alpha1.OutOfServiceTaintRemediationStrategy)
 				Expect(k8sClient.Create(context.Background(), underTestFAR)).To(Succeed())
-				va = createVA(vaName1, workerNode)
-				terminatingPod = createTerminatingPod("far-test-1", testPodName, workerNode)
 			})
-			// Create two VAs and two pods, and at the end clean them up with DeferCleanup
 			It("should have both far taint and out-of-service taint, and at the end they will be deleted", func() {
 				By("Searching for remediation taint")
 				Eventually(func(g Gomega) bool {
@@ -247,10 +242,6 @@ var _ = Describe("FAR Controller", func() {
 				By("Having a finalizer if we have a remediation taint")
 				Expect(controllerutil.ContainsFinalizer(underTestFAR, v1alpha1.FARFinalizer)).To(BeTrue())
 
-				// simulate the out-of-service taint by Pod GC Controller
-				deleteVA(va)
-				deletePod(terminatingPod)
-
 				By("Verifying correct conditions for successfull remediation")
 				Expect(underTestFAR.Status.LastUpdateTime).ToNot(BeNil())
 				verifyStatusCondition(workerNode, commonConditions.ProcessingType, conditionStatusPointer(metav1.ConditionFalse))
@@ -261,7 +252,7 @@ var _ = Describe("FAR Controller", func() {
 				deleteFAR(underTestFAR)
 				Eventually(func(g Gomega) bool {
 					g.Expect(k8sClient.Get(context.Background(), nodeKey, node)).To(Succeed())
-					return utils.TaintExists(node.Spec.Taints, &farNoExecuteTaint) && utils.TaintExists(node.Spec.Taints, &outOfServiceTaint)
+					return utils.TaintExists(node.Spec.Taints, &farNoExecuteTaint) || utils.TaintExists(node.Spec.Taints, &outOfServiceTaint)
 				}, timeoutFinalizer, pollInterval).Should(BeFalse(), "both far taint and out-of-service taint should be removed")
 
 			})
@@ -308,14 +299,6 @@ func createRunningPod(containerName, podName, nodeName string) *corev1.Pod {
 	Expect(k8sClient.Create(context.Background(), pod)).To(Succeed())
 	pod.Status.Phase = corev1.PodRunning
 	Expect(k8sClient.Status().Update(context.Background(), pod)).To(Succeed())
-	return pod
-}
-
-func createTerminatingPod(containerName, podName, nodeName string) *corev1.Pod {
-	pod := buildPod(containerName, podName, nodeName)
-	now := metav1.Now()
-	pod.ObjectMeta = metav1.ObjectMeta{Name: pod.Name, Namespace: pod.Namespace, DeletionTimestamp: &now}
-	ExpectWithOffset(1, k8sClient.Create(context.Background(), pod)).To(Succeed())
 	return pod
 }
 

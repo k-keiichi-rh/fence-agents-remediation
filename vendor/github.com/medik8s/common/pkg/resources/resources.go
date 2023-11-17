@@ -50,31 +50,3 @@ func DeletePods(ctx context.Context, r client.Client, nodeName string) error {
 
 	return nil
 }
-
-func IsResourceDeletionCompleted(r client.Client, nodeName string) bool {
-	pods := &corev1.PodList{}
-	if err := r.List(context.Background(), pods); err != nil {
-		log.Error(err, "failed to get pod list")
-		return false
-	}
-	for _, pod := range pods.Items {
-		if pod.Spec.NodeName == nodeName && pod.ObjectMeta.DeletionTimestamp != nil {
-			log.Info("waiting for terminating pod ", "pod name", pod.Name, "phase", pod.Status.Phase)
-			return false
-		}
-	}
-
-	volumeAttachments := &storagev1.VolumeAttachmentList{}
-	if err := r.List(context.Background(), volumeAttachments); err != nil {
-		log.Error(err, "failed to get volumeAttachments list")
-		return false
-	}
-	for _, va := range volumeAttachments.Items {
-		if va.Spec.NodeName == nodeName {
-			log.Info("waiting for deleting volumeAttachment", "name", va.Name)
-			return false
-		}
-	}
-
-	return true
-}

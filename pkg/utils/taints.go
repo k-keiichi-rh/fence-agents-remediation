@@ -47,7 +47,6 @@ func deleteTaint(taints []corev1.Taint, taintToDelete *corev1.Taint) ([]corev1.T
 func CreateFARNoExecuteTaint() corev1.Taint {
 	return corev1.Taint{
 		Key:    v1alpha1.FARNoExecuteTaintKey,
-		Value:  "fence-agents-remediation",
 		Effect: corev1.TaintEffectNoExecute,
 	}
 }

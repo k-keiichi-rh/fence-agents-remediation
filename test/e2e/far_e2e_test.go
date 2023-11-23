@@ -84,6 +84,7 @@ var _ = Describe("FAR E2e", func() {
 			pod                                 *corev1.Pod
 			creationTimePod, nodeBootTimeBefore time.Time
 			err                                 error
+			remediationStrategy                 v1alpha1.RemediationStrategyType
 		)
 		BeforeEach(func() {
 			nodes = &corev1.NodeList{}
@@ -129,15 +130,29 @@ var _ = Describe("FAR E2e", func() {
 			// set the node as "unhealthy" by disabling kubelet
 			makeNodeUnready(selectedNode)
 
-			far := createFAR(nodeName, fenceAgent, testShareParam, testNodeParam)
+			far := createFAR(nodeName, fenceAgent, testShareParam, testNodeParam, remediationStrategy)
 			DeferCleanup(deleteFAR, far)
 		})
-		When("running FAR to reboot two nodes", func() {
+		When("running FAR with ResourceDeletion remediation strategy to reboot two nodes", func() {
+			BeforeEach(func() {
+				remediationStrategy = v1alpha1.ResourceDeletionRemediationStrategy
+			})
 			It("should successfully remediate the first node", func() {
-				checkRemediation(nodeName, nodeBootTimeBefore, creationTimePod, pod)
+				checkRemediation(nodeName, nodeBootTimeBefore, creationTimePod, pod, remediationStrategy)
 			})
 			It("should successfully remediate the second node", func() {
-				checkRemediation(nodeName, nodeBootTimeBefore, creationTimePod, pod)
+				checkRemediation(nodeName, nodeBootTimeBefore, creationTimePod, pod, remediationStrategy)
+			})
+		})
+		When("running FAR with OutOfServiceTaint remediation strategy to reboot two nodes", func() {
+			BeforeEach(func() {
+				remediationStrategy = v1alpha1.OutOfServiceTaintRemediationStrategy
+			})
+			It("should successfully remediate the first node", func() {
+				checkRemediation(nodeName, nodeBootTimeBefore, creationTimePod, pod, remediationStrategy)
+			})
+			It("should successfully remediate the second node", func() {
+				checkRemediation(nodeName, nodeBootTimeBefore, creationTimePod, pod, remediationStrategy)
 			})
 		})
 	})
@@ -240,13 +255,14 @@ func randomizeWorkerNode(nodes *corev1.NodeList) *corev1.Node {
 }
 
 // createFAR assigns the input to FenceAgentsRemediation object, creates CR, and returns the CR object
-func createFAR(nodeName string, agent string, sharedParameters map[v1alpha1.ParameterName]string, nodeParameters map[v1alpha1.ParameterName]map[v1alpha1.NodeName]string) *v1alpha1.FenceAgentsRemediation {
+func createFAR(nodeName string, agent string, sharedParameters map[v1alpha1.ParameterName]string, nodeParameters map[v1alpha1.ParameterName]map[v1alpha1.NodeName]string, strategy v1alpha1.RemediationStrategyType) *v1alpha1.FenceAgentsRemediation {
 	far := &v1alpha1.FenceAgentsRemediation{
 		ObjectMeta: metav1.ObjectMeta{Name: nodeName, Namespace: operatorNsName},
 		Spec: v1alpha1.FenceAgentsRemediationSpec{
-			Agent:            agent,
-			SharedParameters: sharedParameters,
-			NodeParameters:   nodeParameters,
+			Agent:               agent,
+			SharedParameters:    sharedParameters,
+			NodeParameters:      nodeParameters,
+			RemediationStrategy: strategy,
 		},
 	}
 	ExpectWithOffset(1, k8sClient.Create(context.Background(), far)).ToNot(HaveOccurred())
@@ -273,17 +289,16 @@ func cleanupTestedResources(pod *corev1.Pod) {
 	}
 }
 
-// wasFarTaintAdded checks whether the FAR taint was added to the tested node
-func wasFarTaintAdded(nodeName string) {
-	farTaint := utils.CreateFARNoExecuteTaint()
+// wasTaintAdded checks whether the specified taint was added to the tested node
+func wasTaintAdded(taint corev1.Taint, nodeName string) {
 	var node *corev1.Node
 	Eventually(func(g Gomega) bool {
 		var err error
 		node, err = utils.GetNodeWithName(k8sClient, nodeName)
 		g.Expect(err).ToNot(HaveOccurred())
-		return utils.TaintExists(node.Spec.Taints, &farTaint)
+		return utils.TaintExists(node.Spec.Taints, &taint)
 	}, 1*time.Second, "200ms").Should(BeTrue())
-	log.Info("FAR taint was added", "node name", node.Name, "taint key", farTaint.Key, "taint effect", farTaint.Effect)
+	log.Info("Taint was added", "node name", node.Name, "taint key", taint.Key, "taint effect", taint.Effect)
 }
 
 // waitForNodeHealthyCondition waits until the node's ready condition matches the given status, and it fails after timeout
@@ -398,9 +413,14 @@ func verifyStatusCondition(nodeName, conditionType string, conditionStatus *meta
 }
 
 // checkRemediation verify whether the node was remediated
-func checkRemediation(nodeName string, nodeBootTimeBefore time.Time, oldPodCreationTime time.Time, pod *corev1.Pod) {
+func checkRemediation(nodeName string, nodeBootTimeBefore time.Time, oldPodCreationTime time.Time, pod *corev1.Pod, strategy v1alpha1.RemediationStrategyType) {
 	By("Check if FAR NoExecute taint was added")
-	wasFarTaintAdded(nodeName)
+	wasTaintAdded(utils.CreateFARNoExecuteTaint(), nodeName)
+
+	if strategy == v1alpha1.OutOfServiceTaintRemediationStrategy {
+		By("Check if OutOfService taint was added")
+		wasTaintAdded(utils.CreateOutOfServiceTaint(), nodeName)
+	}
 
 	By("Check if the response of the FA was a success")
 	expectedLog := buildExpectedLogOutput(nodeName, controllers.SuccessFAResponse)

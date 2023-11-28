@@ -65,7 +65,6 @@ func (r *FenceAgentsRemediationTemplate) ValidateDelete() (admission.Warnings, e
 
 func validateStrategy(farSpec FenceAgentsRemediationSpec) (admission.Warnings, error) {
 	if farSpec.RemediationStrategy == OutOfServiceTaintRemediationStrategy && !validation.IsOutOfServiceTaintSupported {
-		//if farSpec.RemediationStrategy == OutOfServiceTaintRemediationStrategy {
 		return nil, fmt.Errorf("%s remediation strategy is not supported at kubernetes version lower than 1.26, please use a different remediation strategy", OutOfServiceTaintRemediationStrategy)
 	}
 	return nil, nil

@@ -418,7 +418,7 @@ func checkRemediation(nodeName string, nodeBootTimeBefore time.Time, oldPodCreat
 	wasTaintAdded(utils.CreateFARNoExecuteTaint(), nodeName)
 
 	if strategy == v1alpha1.OutOfServiceTaintRemediationStrategy {
-		By("Check if OutOfService taint was added")
+		By("Check if out-of-service taint was added")
 		wasTaintAdded(utils.CreateOutOfServiceTaint(), nodeName)
 	}
 

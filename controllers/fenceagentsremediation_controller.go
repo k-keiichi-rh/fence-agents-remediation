@@ -161,7 +161,7 @@ func (r *FenceAgentsRemediationReconciler) Reconcile(ctx context.Context, req ct
 
 		// remove out-of-service taint when using OutOfServiceTaint remediation
 		if far.Spec.RemediationStrategy == v1alpha1.OutOfServiceTaintRemediationStrategy {
-			r.Log.Info("Removing OutOfService taint", "Fence Agent", far.Spec.Agent, "Node Name", req.Name)
+			r.Log.Info("Removing out-of-service taint", "Fence Agent", far.Spec.Agent, "Node Name", req.Name)
 			if err := utils.RemoveTaint(r.Client, far.Name, utils.CreateOutOfServiceTaint()); err != nil && !apiErrors.IsNotFound(err) {
 				r.Log.Error(err, "Failed to remove out-of-service taint", "CR's Name", req.Name)
 				return emptyResult, err
@@ -235,13 +235,13 @@ func (r *FenceAgentsRemediationReconciler) Reconcile(ctx context.Context, req ct
 		// Fence agent action succeeded, and now we try to remove workloads (pods and their volume attachments)
 		switch far.Spec.RemediationStrategy {
 		case v1alpha1.ResourceDeletionRemediationStrategy:
-			r.Log.Info("Remediation strategy is resource deletion which explicitly deletes resources - manually deleting workload", "Fence Agent", far.Spec.Agent, "Node Name", req.Name)
+			r.Log.Info("Remediation strategy is ResourceDeletion which explicitly deletes resources - manually deleting workload", "Fence Agent", far.Spec.Agent, "Node Name", req.Name)
 			if err := commonResources.DeletePods(ctx, r.Client, req.Name); err != nil {
 				r.Log.Error(err, "Resource deletion has failed", "CR's Name", req.Name)
 				return emptyResult, err
 			}
 		case v1alpha1.OutOfServiceTaintRemediationStrategy:
-			r.Log.Info("Remediation strategy is OutOfService taint which implicitly deletes resources - adding OutOfService taint", "Fence Agent", far.Spec.Agent, "Node Name", req.Name)
+			r.Log.Info("Remediation strategy is OutOfServiceTaint which implicitly deletes resources - adding out-of-service taint", "Fence Agent", far.Spec.Agent, "Node Name", req.Name)
 			if err := utils.AppendTaint(r.Client, req.Name, utils.CreateOutOfServiceTaint()); err != nil {
 				r.Log.Error(err, "Failed to add out-of-service taint", "CR's Name", req.Name)
 				return emptyResult, err

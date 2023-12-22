@@ -21,6 +21,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 
 	"go.uber.org/zap/zapcore"
@@ -36,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/medik8s/fence-agents-remediation/api/v1alpha1"
 	"github.com/medik8s/fence-agents-remediation/controllers"
@@ -43,6 +45,12 @@ import (
 	//+kubebuilder:scaffold:imports
 	"github.com/medik8s/fence-agents-remediation/pkg/cli"
 	"github.com/medik8s/fence-agents-remediation/version"
+)
+
+const (
+	WebhookCertDir  = "/apiserver.local.config/certificates"
+	WebhookCertName = "apiserver.crt"
+	WebhookKeyName  = "apiserver.key"
 )
 
 var (
@@ -61,6 +69,7 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
+	var webhookOpts webhook.Options
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -90,9 +99,30 @@ func main() {
 		TLSOpts:     []func(*tls.Config){disableHTTP2},
 	}
 
+	// check for OLM injected certs
+	certs := []string{filepath.Join(WebhookCertDir, WebhookCertName), filepath.Join(WebhookCertDir, WebhookKeyName)}
+	certsInjected := true
+	for _, fname := range certs {
+		if _, err := os.Stat(fname); err != nil {
+			certsInjected = false
+			break
+		}
+	}
+	if certsInjected {
+		webhookOpts = webhook.Options{
+			CertDir:  WebhookCertDir,
+			CertName: WebhookCertName,
+			KeyName:  WebhookKeyName,
+			TLSOpts:  []func(*tls.Config){disableHTTP2},
+		}
+	} else {
+		setupLog.Info("OLM injected certs for webhooks not found")
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		Metrics:                metricsOpts,
+		WebhookServer:          webhook.NewServer(webhookOpts),
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "cb305759.medik8s.io",
@@ -118,6 +148,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&v1alpha1.FenceAgentsRemediationTemplate{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "FenceAgentsRemediationTemplate")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

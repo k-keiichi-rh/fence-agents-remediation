@@ -373,3 +373,24 @@ spec:
     name: Medik8s
     url: https://github.com/medik8s
   version: 0.0.1
+  webhookdefinitions:
+  - admissionReviewVersions:
+    - v1
+    containerPort: 443
+    deploymentName: fence-agents-remediation-controller-manager
+    failurePolicy: Fail
+    generateName: vfenceagentsremediationtemplate.kb.io
+    rules:
+    - apiGroups:
+      - fence-agents-remediation.medik8s.io
+      apiVersions:
+      - v1alpha1
+      operations:
+      - CREATE
+      - UPDATE
+      resources:
+      - fenceagentsremediationtemplates
+    sideEffects: None
+    targetPort: 9443
+    type: ValidatingAdmissionWebhook
+    webhookPath: /validate-fence-agents-remediation-medik8s-io-v1alpha1-fenceagentsremediationtemplateq

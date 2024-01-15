@@ -11,6 +11,8 @@ const (
 	EventReasonFenceAgentExecuted       = "FenceAgentExecuted"
 	EventReasonFenceAgentSucceeded      = "FenceAgentSucceeded"
 	EventReasonDeleteResources          = "DeleteResources"
+	EventReasonAddOutOfServiceTaint     = "AddOutOfServiceTaint"
+	EventReasonRemoveOutOfServiceTaint  = "RemoveOutOfServiceTaint"
 	EventReasonNodeRemediationCompleted = "NodeRemediationCompleted"
 
 	// events messages
@@ -23,5 +25,7 @@ const (
 	EventMessageFenceAgentExecuted       = "Fence agent was executed"
 	EventMessageFenceAgentSucceeded      = "Fence agent was succeeded"
 	EventMessageDeleteResources          = "Manually delete pods from the unhealthy node"
+	EventMessageAddOutOfServiceTaint     = "out-of-service taint was added"
+	EventMessageRemoveOutOfServiceTaint  = "out-of-service taint was removed"
 	EventMessageNodeRemediationCompleted = "Unhealthy node remediation was completed"
 )

@@ -52,13 +52,25 @@ var _ webhook.Validator = &FenceAgentsRemediation{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (far *FenceAgentsRemediation) ValidateCreate() (admission.Warnings, error) {
 	webhookFARLog.Info("validate create", "name", far.Name)
-	return validateAgentName(far.Spec.Agent)
+	if _, err := validateAgentName(far.Spec.Agent); err != nil {
+		return nil, err
+	}
+	if _, err := validateStrategy(far.Spec); err != nil {
+		return nil, err
+	}
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (far *FenceAgentsRemediation) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	webhookFARLog.Info("validate update", "name", far.Name)
-	return validateAgentName(far.Spec.Agent)
+	if _, err := validateAgentName(far.Spec.Agent); err != nil {
+		return nil, err
+	}
+	if _, err := validateStrategy(far.Spec); err != nil {
+		return nil, err
+	}
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
@@ -74,6 +86,13 @@ func validateAgentName(agent string) (admission.Warnings, error) {
 	}
 	if !exists {
 		return nil, fmt.Errorf("unsupported fence agent: %s", agent)
+	}
+	return nil, nil
+}
+
+func validateStrategy(farSpec FenceAgentsRemediationSpec) (admission.Warnings, error) {
+	if farSpec.RemediationStrategy == OutOfServiceTaintRemediationStrategy && !validation.IsOutOfServiceTaintSupported {
+		return nil, fmt.Errorf("%s remediation strategy is not supported at kubernetes version lower than 1.26, please use a different remediation strategy", OutOfServiceTaintRemediationStrategy)
 	}
 	return nil, nil
 }

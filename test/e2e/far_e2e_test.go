@@ -55,6 +55,8 @@ var _ = Describe("FAR E2e", func() {
 		fenceAgent, nodeIdentifierPrefix string
 		testShareParam                   map[v1alpha1.ParameterName]string
 		testNodeParam                    map[v1alpha1.ParameterName]map[v1alpha1.NodeName]string
+		filteredNodes                    *corev1.NodeList
+		selectedNode                     *corev1.Node
 	)
 	BeforeEach(func() {
 		// create FAR CR spec based on OCP platformn
@@ -82,8 +84,6 @@ var _ = Describe("FAR E2e", func() {
 	})
 	Context("stress cluster with ResourceDeletion remediation strategy", func() {
 		var (
-			filteredNodes                 *corev1.NodeList
-			selectedNode                  *corev1.Node
 			nodeName                      string
 			pod                           *corev1.Pod
 			startTime, nodeBootTimeBefore time.Time
@@ -120,12 +120,11 @@ var _ = Describe("FAR E2e", func() {
 				checkRemediation(nodeName, nodeBootTimeBefore, pod, remediationStrategy)
 				remediationTimes = append(remediationTimes, time.Since(startTime))
 			})
+			filteredNodes = nil
 		})
 	})
 	Context("stress cluster with OutOfServiceTaint remediation strategy", func() {
 		var (
-			filteredNodes                 *corev1.NodeList
-			selectedNode                  *corev1.Node
 			nodeName                      string
 			pod                           *corev1.Pod
 			startTime, nodeBootTimeBefore time.Time
@@ -166,6 +165,7 @@ var _ = Describe("FAR E2e", func() {
 				checkRemediation(nodeName, nodeBootTimeBefore, pod, remediationStrategy)
 				remediationTimes = append(remediationTimes, time.Since(startTime))
 			})
+			filteredNodes = nil
 		})
 	})
 

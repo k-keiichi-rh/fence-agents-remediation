@@ -64,7 +64,8 @@ func (vfe *validateAgentExistence) ValidateAgentName(agent string) (bool, error)
 	return vfe.agentExists(agent)
 }
 
-// RemoveTaint removes taint from the taint list when it is existed, and returns error if it fails in the process
+// InitOutOfServiceTaintSupportedFlag checks a cluster's k8s version and
+// set the IsOutOfServiceTaintSupported flag to true if out-of-service is supported on the cluster
 func InitOutOfServiceTaintSupportedFlag(config *rest.Config) error {
 	if cs, err := kubernetes.NewForConfig(config); err != nil || cs == nil {
 		if cs == nil {

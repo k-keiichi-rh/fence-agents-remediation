@@ -47,7 +47,6 @@ const (
 	vaName1        = "va-test-1"
 	vaName2        = "va-test-2"
 
-	forced client.GracePeriodSeconds = 0
 	// intervals
 	timeoutPreRemediation  = "1s" // this timeout is used for the other steps that occur before remediation is completed
 	timeoutPostRemediation = "2s" // this timeout is used for the other steps that occur after remediation is completed

@@ -47,10 +47,7 @@ func (farTemplate *FenceAgentsRemediationTemplate) ValidateCreate() (admission.W
 	if _, err := validateAgentName(farTemplate.Spec.Template.Spec.Agent); err != nil {
 		return nil, err
 	}
-	if _, err := validateStrategy(farTemplate.Spec.Template.Spec); err != nil {
-		return nil, err
-	}
-	return nil, nil
+	return validateStrategy(farTemplate.Spec.Template.Spec.RemediationStrategy)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
@@ -59,10 +56,7 @@ func (farTemplate *FenceAgentsRemediationTemplate) ValidateUpdate(old runtime.Ob
 	if _, err := validateAgentName(farTemplate.Spec.Template.Spec.Agent); err != nil {
 		return nil, err
 	}
-	if _, err := validateStrategy(farTemplate.Spec.Template.Spec); err != nil {
-		return nil, err
-	}
-	return nil, nil
+	return validateStrategy(farTemplate.Spec.Template.Spec.RemediationStrategy)
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type

@@ -107,7 +107,7 @@ func main() {
 	}
 
 	if err := validation.InitOutOfServiceTaintSupportedFlag(mgr.GetConfig()); err != nil {
-		setupLog.Error(err, "unable to verify out-of-service taint support. out-of-service taint isn't supported")
+		setupLog.Error(err, "unable to verify Kubernetes version for indicating the out-of-service taint support. out-of-service taint isn't supported")
 	}
 
 	executer, err := cli.NewExecuter(mgr.GetClient(), mgr.GetEventRecorderFor(operatorName+"-executer"))

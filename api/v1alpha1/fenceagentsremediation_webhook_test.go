@@ -11,20 +11,17 @@ var _ = Describe("FenceAgentsRemediation Validation", func() {
 
 	Context("creating FenceAgentsRemediation", func() {
 
-		Context("with ResourceDeletion strategy", func() {
-
-			When("agent name match format and binary", func() {
-				It("should be accepted", func() {
-					far := getTestFAR(validAgentName)
-					Expect(far.ValidateCreate()).Error().NotTo(HaveOccurred())
-				})
+		When("agent name match format and binary", func() {
+			It("should be accepted", func() {
+				far := getTestFAR(validAgentName)
+				Expect(far.ValidateCreate()).Error().NotTo(HaveOccurred())
 			})
+		})
 
-			When("agent name was not found ", func() {
-				It("should be rejected", func() {
-					far := getTestFAR(invalidAgentName)
-					Expect(far.ValidateCreate()).Error().To(MatchError(ContainSubstring("unsupported fence agent: %s", invalidAgentName)))
-				})
+		When("agent name was not found ", func() {
+			It("should be rejected", func() {
+				far := getTestFAR(invalidAgentName)
+				Expect(far.ValidateCreate()).Error().To(MatchError(ContainSubstring("unsupported fence agent: %s", invalidAgentName)))
 			})
 		})
 
@@ -57,26 +54,24 @@ var _ = Describe("FenceAgentsRemediation Validation", func() {
 	})
 
 	Context("updating FenceAgentsRemediation", func() {
-		Context("with ResourceDeletion strategy", func() {
-			var oldFAR *FenceAgentsRemediation
-			When("agent name match format and binary", func() {
-				BeforeEach(func() {
-					oldFAR = getTestFAR(invalidAgentName)
-				})
-				It("should be accepted", func() {
-					far := getTestFAR(validAgentName)
-					Expect(far.ValidateUpdate(oldFAR)).Error().NotTo(HaveOccurred())
-				})
+		var oldFAR *FenceAgentsRemediation
+		When("agent name match format and binary", func() {
+			BeforeEach(func() {
+				oldFAR = getTestFAR(invalidAgentName)
 			})
+			It("should be accepted", func() {
+				far := getTestFAR(validAgentName)
+				Expect(far.ValidateUpdate(oldFAR)).Error().NotTo(HaveOccurred())
+			})
+		})
 
-			When("agent name was not found ", func() {
-				BeforeEach(func() {
-					oldFAR = getTestFAR(invalidAgentName)
-				})
-				It("should be rejected", func() {
-					far := getTestFAR(invalidAgentName)
-					Expect(far.ValidateUpdate(oldFAR)).Error().To(MatchError(ContainSubstring("unsupported fence agent: %s", invalidAgentName)))
-				})
+		When("agent name was not found ", func() {
+			BeforeEach(func() {
+				oldFAR = getTestFAR(invalidAgentName)
+			})
+			It("should be rejected", func() {
+				far := getTestFAR(invalidAgentName)
+				Expect(far.ValidateUpdate(oldFAR)).Error().To(MatchError(ContainSubstring("unsupported fence agent: %s", invalidAgentName)))
 			})
 		})
 

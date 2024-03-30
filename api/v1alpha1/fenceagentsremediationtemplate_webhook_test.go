@@ -11,19 +11,17 @@ var _ = Describe("FenceAgentsRemediationTemplate Validation", func() {
 
 	Context("creating FenceAgentsRemediationTemplate", func() {
 
-		Context("with ResourceDeletion strategy", func() {
-			When("agent name match format and binary", func() {
-				It("should be accepted", func() {
-					farTemplate := getTestFARTemplate(validAgentName)
-					Expect(farTemplate.ValidateCreate()).Error().NotTo(HaveOccurred())
-				})
+		When("agent name match format and binary", func() {
+			It("should be accepted", func() {
+				farTemplate := getTestFARTemplate(validAgentName)
+				Expect(farTemplate.ValidateCreate()).Error().NotTo(HaveOccurred())
 			})
+		})
 
-			When("agent name was not found ", func() {
-				It("should be rejected", func() {
-					farTemplate := getTestFARTemplate(invalidAgentName)
-					Expect(farTemplate.ValidateCreate()).Error().To(MatchError(ContainSubstring("unsupported fence agent: %s", invalidAgentName)))
-				})
+		When("agent name was not found ", func() {
+			It("should be rejected", func() {
+				farTemplate := getTestFARTemplate(invalidAgentName)
+				Expect(farTemplate.ValidateCreate()).Error().To(MatchError(ContainSubstring("unsupported fence agent: %s", invalidAgentName)))
 			})
 		})
 
@@ -58,28 +56,24 @@ var _ = Describe("FenceAgentsRemediationTemplate Validation", func() {
 	})
 
 	Context("updating FenceAgentsRemediationTemplate", func() {
-
-		Context("with ResourceDeletion strategy", func() {
-			var oldFARTemplate *FenceAgentsRemediationTemplate
-
-			When("agent name match format and binary", func() {
-				BeforeEach(func() {
-					oldFARTemplate = getTestFARTemplate(invalidAgentName)
-				})
-				It("should be accepted", func() {
-					farTemplate := getTestFARTemplate(validAgentName)
-					Expect(farTemplate.ValidateUpdate(oldFARTemplate)).Error().NotTo(HaveOccurred())
-				})
+		var oldFARTemplate *FenceAgentsRemediationTemplate
+		When("agent name match format and binary", func() {
+			BeforeEach(func() {
+				oldFARTemplate = getTestFARTemplate(invalidAgentName)
 			})
+			It("should be accepted", func() {
+				farTemplate := getTestFARTemplate(validAgentName)
+				Expect(farTemplate.ValidateUpdate(oldFARTemplate)).Error().NotTo(HaveOccurred())
+			})
+		})
 
-			When("agent name was not found ", func() {
-				BeforeEach(func() {
-					oldFARTemplate = getTestFARTemplate(invalidAgentName)
-				})
-				It("should be rejected", func() {
-					farTemplate := getTestFARTemplate(invalidAgentName)
-					Expect(farTemplate.ValidateUpdate(oldFARTemplate)).Error().To(MatchError(ContainSubstring("unsupported fence agent: %s", invalidAgentName)))
-				})
+		When("agent name was not found ", func() {
+			BeforeEach(func() {
+				oldFARTemplate = getTestFARTemplate(invalidAgentName)
+			})
+			It("should be rejected", func() {
+				farTemplate := getTestFARTemplate(invalidAgentName)
+				Expect(farTemplate.ValidateUpdate(oldFARTemplate)).Error().To(MatchError(ContainSubstring("unsupported fence agent: %s", invalidAgentName)))
 			})
 		})
 

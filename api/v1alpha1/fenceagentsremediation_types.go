@@ -89,7 +89,11 @@ type FenceAgentsRemediationSpec struct {
 	//+operator-sdk:csv:customresourcedefinitions:type=spec
 	NodeParameters map[ParameterName]map[NodeName]string `json:"nodeparameters,omitempty"`
 
-	//RemediationStrategy is the remediation method for unhealthy nodes.
+	// RemediationStrategy is the remediation method for unhealthy nodes.
+	// Currently, it could be either "OutOfServiceTaint" or "ResourceDeletion".
+	// ResourceDeletion will iterate over all pods related to the unhealthy node and delete them.
+	// OutOfServiceTaint will add the out-of-service taint which is a new well-known taint "node.kubernetes.io/out-of-service"
+	// that enables automatic deletion of pv-attached pods on failed nodes, "out-of-service" taint is only supported on clusters with k8s version 1.26+ or OCP/OKD version 4.13+.
 	// +kubebuilder:default:="ResourceDeletion"
 	// +kubebuilder:validation:Enum=ResourceDeletion;OutOfServiceTaint
 	RemediationStrategy RemediationStrategyType `json:"remediationStrategy,omitempty"`

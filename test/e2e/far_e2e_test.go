@@ -87,11 +87,9 @@ var _ = Describe("FAR E2e", func() {
 		Expect(err).ToNot(HaveOccurred(), "can't get node information")
 	})
 	Context("stress cluster with ResourceDeletion remediation strategy", func() {
-		var (
-			filteredNodes *corev1.NodeList
-		)
+		availableWorkerNodes := getAvailableWorkerNodes()
 		BeforeEach(func() {
-			selectedNode, filteredNodes = pickRemediatedNode(filteredNodes)
+			selectedNode = pickRemediatedNode(availableWorkerNodes)
 			nodeName = selectedNode.Name
 			printNodeDetails(selectedNode, nodeIdentifierPrefix, testNodeParam)
 
@@ -123,15 +121,13 @@ var _ = Describe("FAR E2e", func() {
 		})
 	})
 	Context("stress cluster with OutOfServiceTaint remediation strategy", func() {
-		var (
-			filteredNodes *corev1.NodeList
-		)
+		availableWorkerNodes := getAvailableWorkerNodes()
 		BeforeEach(func() {
 			if _, isExist := os.LookupEnv(skipOOSREnvVarName); isExist {
 				Skip("Skip this block due to out-of-service taint not supported")
 			}
 
-			selectedNode, filteredNodes = pickRemediatedNode(filteredNodes)
+			selectedNode = pickRemediatedNode(availableWorkerNodes)
 			nodeName = selectedNode.Name
 			printNodeDetails(selectedNode, nodeIdentifierPrefix, testNodeParam)
 
@@ -264,40 +260,29 @@ func buildNodeParameters(clusterPlatformType configv1.PlatformType) (map[v1alpha
 	return testNodeParam, nil
 }
 
-// randomizeWorkerNode returns a worker node that his name is different than the previous one
-// (on the first call it will allways return new node)
-func randomizeWorkerNode(nodes *corev1.NodeList) *corev1.Node {
+// getAvailableNodes a list of available worker nodes in the cluster
+func getAvailableWorkerNodes() *corev1.NodeList {
+	availableNodes := &corev1.NodeList{}
+	selector := labels.NewSelector()
+	requirement, _ := labels.NewRequirement(medik8sLabels.WorkerRole, selection.Exists, []string{})
+	selector = selector.Add(*requirement)
+	Expect(k8sClient.List(context.Background(), availableNodes, &client.ListOptions{LabelSelector: selector})).ToNot(HaveOccurred())
+	if len(availableNodes.Items) < 1 {
+		Fail("No worker nodes found in the cluster")
+	}
+	return availableNodes
+}
+
+// pickRemediatedNode randomly returns a next remediated node from the current available nodes,
+// and then the node is removed from the list of available nodes
+func pickRemediatedNode(availableNodes *corev1.NodeList) *corev1.Node {
 	// Generate a random seed based on the current time
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	// Randomly select a worker node
-	return &nodes.Items[r.Intn(len(nodes.Items))]
-}
-
-// pickRemediatedNode returns a next remediated node from the current available nodes,
-// and then the node is removed from the list of available nodes
-func pickRemediatedNode(availableNodes *corev1.NodeList) (*corev1.Node, *corev1.NodeList) {
-	if availableNodes == nil {
-		availableNodes = &corev1.NodeList{}
-		selector := labels.NewSelector()
-		requirement, _ := labels.NewRequirement(medik8sLabels.WorkerRole, selection.Exists, []string{})
-		selector = selector.Add(*requirement)
-		Expect(k8sClient.List(context.Background(), availableNodes, &client.ListOptions{LabelSelector: selector})).ToNot(HaveOccurred())
-		if len(availableNodes.Items) < 1 {
-			Fail("No worker nodes found in the cluster")
-		}
-	}
-
-	selectedNode := randomizeWorkerNode(availableNodes)
-
-	// filter the last remediated node from the list of available nodes
-	newFilteredNodes := &corev1.NodeList{}
-	for _, node := range availableNodes.Items {
-		if node.Name != selectedNode.Name {
-			newFilteredNodes.Items = append(newFilteredNodes.Items, node)
-		}
-	}
-
-	return selectedNode, newFilteredNodes
+	selectedNodeIndex := r.Intn(len(availableNodes.Items))
+	// Delete the selected node from the list of available nodes
+	availableNodes.Items = append(availableNodes.Items[:selectedNodeIndex], availableNodes.Items[selectedNodeIndex+1:]...)
+	return &availableNodes.Items[selectedNodeIndex]
 }
 
 // createTestedPod creates tested pod which will be deleted by the far CR

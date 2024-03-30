@@ -35,7 +35,7 @@ var (
 	webhookFARLog = logf.Log.WithName("fenceagentsremediation-resource")
 	// verify agent existence with os.Stat function
 	agentValidator = validation.NewAgentValidator()
-	//isOutOfServiceTaintSupported will be set to true in case out-of-service taint is supported (k8s 1.26 or higher)
+	// isOutOfServiceTaintSupported will be set to true in case out-of-service taint is supported (k8s 1.26 or higher)
 	isOutOfServiceTaintSupported bool
 )
 
@@ -55,25 +55,26 @@ var _ webhook.Validator = &FenceAgentsRemediation{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (far *FenceAgentsRemediation) ValidateCreate() (admission.Warnings, error) {
 	webhookFARLog.Info("validate create", "name", far.Name)
-	if _, err := validateAgentName(far.Spec.Agent); err != nil {
-		return nil, err
-	}
-	return validateStrategy(far.Spec.RemediationStrategy)
+	return validateFAR(&far.Spec)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (far *FenceAgentsRemediation) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	webhookFARLog.Info("validate update", "name", far.Name)
-	if _, err := validateAgentName(far.Spec.Agent); err != nil {
-		return nil, err
-	}
-	return validateStrategy(far.Spec.RemediationStrategy)
+	return validateFAR(&far.Spec)
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (far *FenceAgentsRemediation) ValidateDelete() (admission.Warnings, error) {
 	webhookFARLog.Info("validate delete", "name", far.Name)
 	return nil, nil
+}
+
+func validateFAR(farSpec *FenceAgentsRemediationSpec) (admission.Warnings, error) {
+	if _, err := validateAgentName(farSpec.Agent); err != nil {
+		return nil, err
+	}
+	return validateStrategy(farSpec.RemediationStrategy)
 }
 
 func InitOutOfServiceTaintSupportedFlag(outOfServiceTaintSupported bool) {

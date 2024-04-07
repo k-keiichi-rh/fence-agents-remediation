@@ -266,7 +266,10 @@ func getAvailableWorkerNodes() *corev1.NodeList {
 	selector := labels.NewSelector()
 	requirement, _ := labels.NewRequirement(medik8sLabels.WorkerRole, selection.Exists, []string{})
 	selector = selector.Add(*requirement)
-	Expect(k8sClient.List(context.Background(), availableNodes, &client.ListOptions{LabelSelector: selector})).ToNot(HaveOccurred())
+	err := k8sClient.List(context.Background(), availableNodes, &client.ListOptions{LabelSelector: selector})
+	if err != nil {
+		Fail("failed fetching available worker nodes")
+	}
 	if len(availableNodes.Items) < 1 {
 		Fail("No worker nodes found in the cluster")
 	}

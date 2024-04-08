@@ -171,7 +171,7 @@ func (r *FenceAgentsRemediationReconciler) Reconcile(ctx context.Context, req ct
 			r.Log.Info("Removing out-of-service taint", "Fence Agent", far.Spec.Agent, "Node Name", node.Name)
 			taint := utils.CreateOutOfServiceTaint()
 			if err := utils.RemoveTaint(r.Client, node.Name, taint); err != nil {
-				if apiErrors.IsNotFound(err) {
+				if apiErrors.IsConflict(err) {
 					r.Log.Error(err, "Failed to remove taint from node due to node update, retrying... ,", "node name", node.Name, "taint key", taint.Key, "taint effect", taint.Effect)
 					return ctrl.Result{RequeueAfter: time.Second}, nil
 				} else if !apiErrors.IsNotFound(err) {

@@ -87,8 +87,11 @@ var _ = Describe("FAR E2e", func() {
 		Expect(err).ToNot(HaveOccurred(), "can't get node information")
 	})
 	Context("stress cluster with ResourceDeletion remediation strategy", func() {
-		availableWorkerNodes := getAvailableWorkerNodes()
+		var availableWorkerNodes *corev1.NodeList
 		BeforeEach(func() {
+			if availableWorkerNodes == nil {
+				availableWorkerNodes = getAvailableWorkerNodes()
+			}
 			selectedNode = pickRemediatedNode(availableWorkerNodes)
 			nodeName = selectedNode.Name
 			printNodeDetails(selectedNode, nodeIdentifierPrefix, testNodeParam)
@@ -121,12 +124,15 @@ var _ = Describe("FAR E2e", func() {
 		})
 	})
 	Context("stress cluster with OutOfServiceTaint remediation strategy", func() {
-		availableWorkerNodes := getAvailableWorkerNodes()
+		var availableWorkerNodes *corev1.NodeList
 		BeforeEach(func() {
 			if _, isExist := os.LookupEnv(skipOOSREnvVarName); isExist {
 				Skip("Skip this block due to out-of-service taint not supported")
 			}
 
+			if availableWorkerNodes == nil {
+				availableWorkerNodes = getAvailableWorkerNodes()
+			}
 			selectedNode = pickRemediatedNode(availableWorkerNodes)
 			nodeName = selectedNode.Name
 			printNodeDetails(selectedNode, nodeIdentifierPrefix, testNodeParam)
@@ -266,10 +272,7 @@ func getAvailableWorkerNodes() *corev1.NodeList {
 	selector := labels.NewSelector()
 	requirement, _ := labels.NewRequirement(medik8sLabels.WorkerRole, selection.Exists, []string{})
 	selector = selector.Add(*requirement)
-	err := k8sClient.List(context.Background(), availableNodes, &client.ListOptions{LabelSelector: selector})
-	if err != nil {
-		Fail("failed fetching available worker nodes")
-	}
+	Expect(k8sClient.List(context.Background(), availableNodes, &client.ListOptions{LabelSelector: selector})).ToNot(HaveOccurred())
 	if len(availableNodes.Items) < 1 {
 		Fail("No worker nodes found in the cluster")
 	}
@@ -279,6 +282,9 @@ func getAvailableWorkerNodes() *corev1.NodeList {
 // pickRemediatedNode randomly returns a next remediated node from the current available nodes,
 // and then the node is removed from the list of available nodes
 func pickRemediatedNode(availableNodes *corev1.NodeList) *corev1.Node {
+	if len(availableNodes.Items) < 1 {
+		Fail("No available node found for remediation")
+	}
 	// Generate a random seed based on the current time
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	// Randomly select a worker node
